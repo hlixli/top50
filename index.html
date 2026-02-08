@@ -428,41 +428,42 @@
       font-size: 14px;
     }
     .last-update {
-      font-size: 10px;
+      font-size: 11px;
       margin-bottom: 12px;
     }
     .crypto-card {
-      grid-template-columns: 28px 1fr auto;
+      grid-template-columns: 22px 1fr 55px auto;
       gap: 8px;
-      padding: 12px;
+      padding: 12px 10px;
     }
     .crypto-sparkline {
-      display: none;
+      width: 55px;
+      height: 26px;
     }
     .crypto-rank {
-      width: 28px;
-      height: 28px;
-      font-size: 11px;
-    }
-    .crypto-name {
-      font-size: 13px;
-    }
-    .crypto-symbol {
-      font-size: 10px;
-    }
-    .crypto-mcap {
-      font-size: 10px;
-    }
-    .crypto-icon {
       width: 22px;
       height: 22px;
+      font-size: 10px;
+    }
+    .crypto-name {
+      font-size: 14px;
+    }
+    .crypto-symbol {
+      font-size: 11px;
+    }
+    .crypto-mcap {
+      font-size: 11px;
+    }
+    .crypto-icon {
+      width: 24px;
+      height: 24px;
     }
     .crypto-price {
-      font-size: 13px;
+      font-size: 14px;
     }
     .crypto-change {
-      font-size: 9px;
-      padding: 2px 4px;
+      font-size: 10px;
+      padding: 2px 5px;
     }
     .crypto-price-block {
       flex-direction: column;
@@ -483,10 +484,10 @@
       padding: 12px;
     }
     .stat-label {
-      font-size: 9px;
+      font-size: 10px;
     }
     .stat-value {
-      font-size: 14px;
+      font-size: 15px;
     }
     .stat-chart {
       height: 35px;
@@ -506,10 +507,25 @@
   /* Очень маленькие экраны */
   @media (max-width: 360px) {
     .crypto-card {
-      padding: 10px;
+      grid-template-columns: 20px 1fr 45px auto;
+      padding: 10px 8px;
+      gap: 6px;
+    }
+    .crypto-sparkline {
+      width: 45px;
+      height: 22px;
+    }
+    .crypto-rank {
+      width: 20px;
+      height: 20px;
+      font-size: 9px;
     }
     .crypto-name {
-      max-width: 100px;
+      max-width: 80px;
+      font-size: 13px;
+    }
+    .crypto-price {
+      font-size: 13px;
     }
     #marketStats2 {
       grid-template-columns: 1fr 1fr;
