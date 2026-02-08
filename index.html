@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>📊 Top 50 Crypto</title>
+<title>📊</title>
 
 <!-- PWA / iOS Full Screen -->
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Top 50">
+<meta name="apple-mobile-web-app-title" content="📊">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000' width='100' height='100' rx='20'/><text x='50' y='68' font-size='45' text-anchor='middle'>📊</text></svg>">
@@ -28,12 +28,12 @@
     background: #000;
     color: #aaa;
     font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-    font-size: 15px;
-    padding: 22px;
-    padding-top: max(30px, env(safe-area-inset-top));
-    padding-bottom: max(80px, env(safe-area-inset-bottom));
-    padding-left: max(22px, env(safe-area-inset-left));
-    padding-right: max(22px, env(safe-area-inset-right));
+    font-size: 16px;
+    padding: 24px;
+    padding-top: max(32px, env(safe-area-inset-top));
+    padding-bottom: max(90px, env(safe-area-inset-bottom));
+    padding-left: max(24px, env(safe-area-inset-left));
+    padding-right: max(24px, env(safe-area-inset-right));
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -73,13 +73,13 @@
   /* Карточка криптовалюты */
   .crypto-card {
     display: grid;
-    grid-template-columns: 40px 1fr 80px auto;
+    grid-template-columns: 44px 1fr 90px auto;
     align-items: center;
-    gap: 12px;
-    padding: 16px 18px;
+    gap: 14px;
+    padding: 18px 20px;
     background: #0a0a0a;
     border: 1px solid #1a1a1a;
-    border-radius: 8px;
+    border-radius: 10px;
     transition: all 0.2s ease;
     cursor: pointer;
     text-decoration: none;
@@ -102,14 +102,14 @@
 
   /* Ранг */
   .crypto-rank {
-    width: 32px;
-    height: 32px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     background: #151515;
     border-radius: 50%;
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
     color: #666;
   }
@@ -131,13 +131,13 @@
     gap: 10px;
   }
   .crypto-icon {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #1a1a1a;
   }
   .crypto-name {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: #fff;
     white-space: nowrap;
@@ -145,13 +145,13 @@
     text-overflow: ellipsis;
   }
   .crypto-symbol {
-    font-size: 12px;
+    font-size: 13px;
     color: #555;
     text-transform: uppercase;
     font-weight: 500;
   }
   .crypto-mcap {
-    font-size: 12px;
+    font-size: 13px;
     color: #444;
   }
 
@@ -162,16 +162,16 @@
     gap: 10px;
   }
   .crypto-price {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: #fff;
     font-family: 'SF Mono', 'Menlo', 'Courier New', monospace;
   }
   .crypto-change {
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 500;
-    padding: 2px 6px;
-    border-radius: 3px;
+    padding: 3px 7px;
+    border-radius: 4px;
   }
   .crypto-change.positive {
     color: #22c55e;
@@ -313,7 +313,7 @@
     letter-spacing: 1px;
   }
   .stat-value {
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 600;
     color: #fff;
     transition: color 0.3s ease;
@@ -391,8 +391,8 @@
   
   /* Спарклайн для крипты */
   .crypto-sparkline {
-    width: 80px;
-    height: 32px;
+    width: 90px;
+    height: 36px;
     flex-shrink: 0;
   }
   .crypto-sparkline svg {
@@ -403,17 +403,17 @@
   /* Адаптивность для планшетов */
   @media (max-width: 768px) {
     body {
-      padding: 18px;
-      padding-top: max(25px, env(safe-area-inset-top));
+      padding: 20px;
+      padding-top: max(26px, env(safe-area-inset-top));
     }
     .crypto-card {
-      grid-template-columns: 36px 1fr 70px auto;
-      gap: 10px;
-      padding: 14px 16px;
+      grid-template-columns: 38px 1fr 80px auto;
+      gap: 12px;
+      padding: 16px 18px;
     }
     .crypto-sparkline {
-      width: 70px;
-      height: 30px;
+      width: 80px;
+      height: 34px;
     }
     #marketStats2 {
       grid-template-columns: repeat(2, 1fr);
@@ -423,81 +423,82 @@
   /* Адаптивность для мобильных */
   @media (max-width: 480px) {
     body {
-      padding: 12px;
-      padding-top: max(15px, env(safe-area-inset-top));
-      font-size: 14px;
+      padding: 14px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      font-size: 15px;
     }
     .last-update {
-      font-size: 11px;
-      margin-bottom: 12px;
+      font-size: 12px;
+      margin-bottom: 14px;
     }
     .crypto-card {
-      grid-template-columns: 22px 1fr 55px auto;
+      grid-template-columns: 24px 1fr 75px auto;
       gap: 8px;
-      padding: 12px 10px;
+      padding: 14px 12px;
     }
     .crypto-sparkline {
-      width: 55px;
-      height: 26px;
+      width: 75px;
+      height: 32px;
     }
     .crypto-rank {
-      width: 22px;
-      height: 22px;
-      font-size: 10px;
+      width: 24px;
+      height: 24px;
+      font-size: 11px;
     }
     .crypto-name {
-      font-size: 14px;
+      font-size: 15px;
+      max-width: 65px;
     }
     .crypto-symbol {
-      font-size: 11px;
+      font-size: 12px;
     }
     .crypto-mcap {
-      font-size: 11px;
+      font-size: 12px;
     }
     .crypto-icon {
       width: 24px;
       height: 24px;
     }
     .crypto-price {
-      font-size: 14px;
+      font-size: 15px;
     }
     .crypto-change {
-      font-size: 10px;
-      padding: 2px 5px;
+      font-size: 11px;
+      padding: 3px 6px;
     }
     .crypto-price-block {
       flex-direction: column;
       align-items: flex-end;
-      gap: 4px;
+      gap: 5px;
     }
     .market-stats {
       grid-template-columns: 1fr;
-      gap: 8px;
-      margin-bottom: 15px;
+      gap: 10px;
+      margin-bottom: 16px;
     }
     #marketStats2 {
       grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
-      margin-bottom: 15px;
+      gap: 10px;
+      margin-bottom: 16px;
     }
     .stat-card {
-      padding: 12px;
+      padding: 14px;
     }
     .stat-label {
-      font-size: 10px;
+      font-size: 11px;
     }
     .stat-value {
-      font-size: 15px;
+      font-size: 16px;
     }
     .stat-chart {
-      height: 35px;
+      height: 38px;
     }
     #refreshBtn {
-      bottom: 15px;
-      right: 15px;
-      width: 42px;
-      height: 42px;
-      font-size: 11px;
+      bottom: 16px;
+      right: 16px;
+      width: 46px;
+      height: 46px;
+      font-size: 12px;
     }
     .crypto-name-row {
       gap: 6px;
@@ -507,31 +508,31 @@
   /* Очень маленькие экраны */
   @media (max-width: 360px) {
     .crypto-card {
-      grid-template-columns: 20px 1fr 45px auto;
-      padding: 10px 8px;
+      grid-template-columns: 22px 1fr 65px auto;
+      padding: 12px 10px;
       gap: 6px;
     }
     .crypto-sparkline {
-      width: 45px;
-      height: 22px;
+      width: 65px;
+      height: 28px;
     }
     .crypto-rank {
-      width: 20px;
-      height: 20px;
-      font-size: 9px;
+      width: 22px;
+      height: 22px;
+      font-size: 10px;
     }
     .crypto-name {
-      max-width: 80px;
-      font-size: 13px;
+      max-width: 55px;
+      font-size: 14px;
     }
     .crypto-price {
-      font-size: 13px;
+      font-size: 14px;
     }
     #marketStats2 {
       grid-template-columns: 1fr 1fr;
     }
     .stat-value {
-      font-size: 13px;
+      font-size: 14px;
     }
   }
 
@@ -540,9 +541,36 @@
     height: 80px;
     flex-shrink: 0;
   }
+
+  /* Логотип */
+  .site-logo {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: none;
+    -webkit-user-drag: none;
+    -khtml-user-drag: none;
+    -moz-user-drag: none;
+    -o-user-drag: none;
+  }
+  @media (max-width: 480px) {
+    .site-logo {
+      width: 50px;
+      height: 50px;
+      margin-bottom: 16px;
+      border-radius: 10px;
+    }
+  }
 </style>
 </head>
 <body>
+
+<img src="Logo1-31.png" alt="" class="site-logo" draggable="false" oncontextmenu="return false;">
 
 <div class="last-update" id="lastUpdate">Загрузка...</div>
 
@@ -659,12 +687,12 @@
     return STABLECOINS.includes(symbol.toLowerCase());
   }
   
-  // Создание SVG спарклайна
+  // Создание SVG спарклайна со сглаживанием
   function createSparkline(data, isPositive, isStable = false) {
     if (!data || data.length === 0) return '';
     
-    const width = 80;
-    const height = 32;
+    const width = 90;
+    const height = 36;
     const padding = 2;
     
     // Для стейблкоинов - прямая серая линия
@@ -675,20 +703,35 @@
       </svg>`;
     }
     
-    const min = Math.min(...data);
-    const max = Math.max(...data);
+    // Упрощаем данные - берём каждый N-й элемент
+    const step = Math.max(1, Math.floor(data.length / 30));
+    const simplified = data.filter((_, i) => i % step === 0);
+    
+    const min = Math.min(...simplified);
+    const max = Math.max(...simplified);
     const range = max - min || 1;
     
-    const points = data.map((val, i) => {
-      const x = padding + (i / (data.length - 1)) * (width - padding * 2);
+    // Вычисляем точки
+    const points = simplified.map((val, i) => {
+      const x = padding + (i / (simplified.length - 1)) * (width - padding * 2);
       const y = height - padding - ((val - min) / range) * (height - padding * 2);
-      return `${x},${y}`;
-    }).join(' ');
+      return { x, y };
+    });
+    
+    // Создаём сглаженную кривую Bezier
+    let path = `M ${points[0].x},${points[0].y}`;
+    for (let i = 0; i < points.length - 1; i++) {
+      const p0 = points[i];
+      const p1 = points[i + 1];
+      const midX = (p0.x + p1.x) / 2;
+      path += ` Q ${p0.x},${p0.y} ${midX},${(p0.y + p1.y) / 2}`;
+    }
+    path += ` L ${points[points.length - 1].x},${points[points.length - 1].y}`;
     
     const color = isPositive ? '#22c55e' : '#ef4444';
     
     return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <polyline fill="none" stroke="${color}" stroke-width="1.5" points="${points}" />
+      <path fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="${path}" />
     </svg>`;
   }
   
