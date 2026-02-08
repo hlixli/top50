@@ -250,41 +250,30 @@
   }
 
   /* Кнопка обновления */
-  .refresh-btn {
+  #refreshBtn {
     position: fixed;
     bottom: 30px;
     right: 30px;
-    width: 50px;
-    height: 50px;
+    width: 48px;
+    height: 48px;
     background: #111;
     border: 1px solid #333;
     border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    color: #888;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: inherit;
     cursor: pointer;
     z-index: 50;
     -webkit-tap-highlight-color: transparent;
-    touch-action: manipulation;
   }
-  .refresh-btn svg {
-    width: 22px;
-    height: 22px;
-    color: #888;
+  #refreshBtn:hover:not(:disabled) {
+    background: #1a1a1a;
   }
-  .refresh-btn.loading {
-    opacity: 0.5;
-    pointer-events: none;
-  }
-  .refresh-btn.cooldown {
-    opacity: 0.3;
-    pointer-events: none;
-  }
-  .refresh-btn .cooldown-timer {
-    position: absolute;
-    font-size: 11px;
-    color: #666;
-    font-weight: 600;
+  #refreshBtn:disabled {
+    background: #0a0a0a;
+    color: #555;
+    cursor: default;
   }
 
   /* Общая статистика */
@@ -502,15 +491,12 @@
     .stat-chart {
       height: 35px;
     }
-    .refresh-btn {
+    #refreshBtn {
       bottom: 15px;
       right: 15px;
-      width: 44px;
-      height: 44px;
-    }
-    .refresh-btn svg {
-      width: 20px;
-      height: 20px;
+      width: 42px;
+      height: 42px;
+      font-size: 11px;
     }
     .crypto-name-row {
       gap: 6px;
@@ -603,13 +589,7 @@
   </div>
 </div>
 
-<button class="refresh-btn" id="refreshBtn" title="Обновить">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-    <path d="M23 4v6h-6"/>
-    <path d="M1 20v-6h6"/>
-    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
-  </svg>
-</button>
+<button id="refreshBtn" title="Обновить">↻</button>
 
 <div class="footer-space"></div>
 
@@ -947,9 +927,6 @@
   
   // Полная загрузка всех данных с задержками
   async function loadAllData() {
-    const refreshBtn = document.getElementById('refreshBtn');
-    refreshBtn.classList.add('loading');
-    
     try {
       await loadCryptoData();
       await delay(300);
@@ -958,71 +935,54 @@
       await loadBtcAth();
     } catch (error) {
       console.error('Ошибка загрузки:', error);
-    } finally {
-      refreshBtn.classList.remove('loading');
     }
   }
   
-  // Cooldown для защиты от rate limit
-  const COOLDOWN_TIME = 60000; // 60 секунд между обновлениями
-  let lastRefreshTime = 0;
-  let cooldownInterval = null;
+  // === КНОПКА ОБНОВЛЕНИЯ ===
+  const COOLDOWN = 60; // секунд
+  let countdown = 0;
+  let timer = null;
+  const btn = document.getElementById('refreshBtn');
+  
+  function updateBtn() {
+    if (countdown > 0) {
+      btn.textContent = countdown;
+      btn.disabled = true;
+    } else {
+      btn.textContent = '↻';
+      btn.disabled = false;
+    }
+  }
   
   function startCooldown() {
-    const refreshBtn = document.getElementById('refreshBtn');
-    const svg = refreshBtn.querySelector('svg');
-    lastRefreshTime = Date.now();
-    
-    // Добавляем таймер
-    let timerEl = refreshBtn.querySelector('.cooldown-timer');
-    if (!timerEl) {
-      timerEl = document.createElement('span');
-      timerEl.className = 'cooldown-timer';
-      refreshBtn.appendChild(timerEl);
-    }
-    
-    refreshBtn.classList.add('cooldown');
-    svg.style.display = 'none';
-    
-    function updateTimer() {
-      const elapsed = Date.now() - lastRefreshTime;
-      const remaining = Math.ceil((COOLDOWN_TIME - elapsed) / 1000);
-      
-      if (remaining <= 0) {
-        refreshBtn.classList.remove('cooldown');
-        svg.style.display = '';
-        timerEl.textContent = '';
-        clearInterval(cooldownInterval);
-        cooldownInterval = null;
-      } else {
-        timerEl.textContent = remaining + 's';
+    countdown = COOLDOWN;
+    updateBtn();
+    if (timer) clearInterval(timer);
+    timer = setInterval(function() {
+      countdown--;
+      updateBtn();
+      if (countdown <= 0) {
+        clearInterval(timer);
+        timer = null;
       }
-    }
-    
-    updateTimer();
-    cooldownInterval = setInterval(updateTimer, 1000);
+    }, 1000);
   }
   
-  function canRefresh() {
-    return Date.now() - lastRefreshTime >= COOLDOWN_TIME;
-  }
-  
-  // Кнопка обновления
-  document.getElementById('refreshBtn').addEventListener('click', function() {
-    if (canRefresh()) {
+  btn.onclick = function() {
+    if (countdown <= 0) {
       loadAllData();
       startCooldown();
     }
-  });
+  };
 
   // Загрузка при старте
   loadAllData();
   loadMcapChart();
-  startCooldown(); // Запускаем cooldown после первой загрузки
+  startCooldown();
   
-  // Автообновление каждые 90 секунд (чтобы не превышать лимиты API)
+  // Автообновление каждые 90 секунд
   setInterval(function() {
-    if (canRefresh()) {
+    if (countdown <= 0) {
       loadAllData();
       startCooldown();
     }
