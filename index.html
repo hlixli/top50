@@ -13,6 +13,18 @@
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23000' width='100' height='100' rx='20'/><text x='50' y='68' font-size='45' text-anchor='middle'>📊</text></svg>">
 
+<!-- Preconnect to API domains for faster first request -->
+<link rel="preconnect" href="https://api.coingecko.com" crossorigin>
+<link rel="preconnect" href="https://api.alternative.me" crossorigin>
+<link rel="preconnect" href="https://assets.coingecko.com" crossorigin>
+<link rel="preconnect" href="https://coin-images.coingecko.com" crossorigin>
+<link rel="preconnect" href="https://corsproxy.io" crossorigin>
+<link rel="dns-prefetch" href="https://api.coingecko.com">
+<link rel="dns-prefetch" href="https://api.alternative.me">
+<link rel="dns-prefetch" href="https://assets.coingecko.com">
+<link rel="dns-prefetch" href="https://coin-images.coingecko.com">
+<link rel="dns-prefetch" href="https://corsproxy.io">
+
 <style>
   * {
     margin: 0;
@@ -80,10 +92,14 @@
     background: #0a0a0a;
     border: 1px solid #1a1a1a;
     border-radius: 10px;
-    transition: all 0.2s ease;
+    transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
     cursor: pointer;
     text-decoration: none;
     -webkit-tap-highlight-color: transparent;
+    contain: layout style paint;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 72px;
+    will-change: transform;
   }
   .crypto-card:hover {
     background: #111;
@@ -135,6 +151,7 @@
     height: 32px;
     border-radius: 50%;
     background: #1a1a1a;
+    content-visibility: auto;
   }
   .crypto-name {
     font-size: 17px;
@@ -216,7 +233,23 @@
     }
   }
   .crypto-list .crypto-card {
-    animation: fadeInUp 0.3s ease forwards;
+    animation: fadeInUp 0.2s ease forwards;
+  }
+
+  /* Отключаем анимации при экономии трафика / слабых устройствах */
+  @media (prefers-reduced-motion: reduce) {
+    .crypto-list .crypto-card {
+      animation: none;
+    }
+    .crypto-card {
+      transition: none;
+    }
+    .spinner {
+      animation: spin 1.5s linear infinite;
+    }
+    .fear-greed-indicator {
+      transition: none;
+    }
   }
 
   /* Ошибка */
@@ -290,6 +323,7 @@
     border: 1px solid #1a1a1a;
     border-radius: 8px;
     padding: 14px;
+    contain: layout style;
   }
   .stat-card.with-chart {
     display: flex;
@@ -570,7 +604,7 @@
 </head>
 <body>
 
-<img src="Logo1-31.png" alt="" class="site-logo" draggable="false" oncontextmenu="return false;">
+<img src="Logo1-31.png" alt="" class="site-logo" draggable="false" oncontextmenu="return false;" width="60" height="60" decoding="async" fetchpriority="high">
 
 <div class="last-update" id="lastUpdate">Загрузка...</div>
 
@@ -638,414 +672,414 @@
 <div class="footer-space"></div>
 
 <script>
+  // === PERFORMANCE-OPTIMIZED CRYPTO DASHBOARD ===
+  
   // CORS Proxy для локальных файлов
   const CORS_PROXY = 'https://corsproxy.io/?';
   const API_BASE = 'https://api.coingecko.com/api/v3';
+  const needsProxy = location.protocol === 'file:';
   
-  // Проверка нужен ли proxy (локальный файл)
-  const needsProxy = window.location.protocol === 'file:';
-  const API_URL = needsProxy ? CORS_PROXY + encodeURIComponent(API_BASE) : API_BASE;
-  
-  // Функция для создания URL с proxy
   function apiUrl(endpoint) {
     const fullUrl = API_BASE + endpoint;
     return needsProxy ? CORS_PROXY + encodeURIComponent(fullUrl) : fullUrl;
   }
   
-  // Форматирование чисел
-  function formatPrice(price) {
-    if (price >= 1000) {
-      return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 0 });
-    } else if (price >= 1) {
-      return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    } else {
-      return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  // === API RESPONSE CACHE ===
+  const apiCache = new Map();
+  const CACHE_TTL = 45000; // 45 секунд
+  
+  async function cachedFetch(url, ttl = CACHE_TTL) {
+    const cached = apiCache.get(url);
+    if (cached && Date.now() - cached.time < ttl) {
+      return cached.data;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000); // 12s timeout
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (!res.ok) {
+        if (res.status === 429) throw new Error('Превышен лимит запросов. Подождите минуту.');
+        throw new Error('API недоступен');
+      }
+      const data = await res.json();
+      apiCache.set(url, { data, time: Date.now() });
+      return data;
+    } catch (e) {
+      clearTimeout(timeout);
+      // Return stale cache on error if available
+      if (cached) return cached.data;
+      throw e;
     }
   }
   
-  function formatMarketCap(mcap) {
-    if (mcap >= 1e12) {
-      return '$' + (mcap / 1e12).toFixed(2) + 'T';
-    } else if (mcap >= 1e9) {
-      return '$' + (mcap / 1e9).toFixed(2) + 'B';
-    } else if (mcap >= 1e6) {
-      return '$' + (mcap / 1e6).toFixed(2) + 'M';
-    }
-    return '$' + mcap.toLocaleString();
+  // === DOM REFERENCES (cached once) ===
+  const $ = id => document.getElementById(id);
+  const DOM = {
+    list: $('cryptoList'),
+    lastUpdate: $('lastUpdate'),
+    totalMcap: $('totalMcap'),
+    totalVolume: $('totalVolume'),
+    btcDominance: $('btcDominance'),
+    btcDomChange: $('btcDomChange'),
+    fearGreedValue: $('fearGreedValue'),
+    fearGreedIndicator: $('fearGreedIndicator'),
+    fearGreedLabel: $('fearGreedLabel'),
+    btcToAth: $('btcToAth'),
+    btcAthPrice: $('btcAthPrice'),
+    btcFromAth: $('btcFromAth'),
+    btcCurrentPrice: $('btcCurrentPrice'),
+    mcapChart: $('mcapChart'),
+  };
+  
+  // === FORMATTING (optimized — avoid toLocaleString overhead) ===
+  const fmtCompact = new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 });
+  const fmtDecimal2 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fmtDecimal4 = new Intl.NumberFormat('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 6 });
+  
+  function formatPrice(p) {
+    if (p >= 1000) return '$' + fmtCompact.format(p);
+    if (p >= 1) return '$' + fmtDecimal2.format(p);
+    return '$' + fmtDecimal4.format(p);
   }
   
-  function formatChange(change) {
-    const sign = change >= 0 ? '+' : '';
-    return sign + change.toFixed(2) + '%';
+  function formatMarketCap(m) {
+    if (m >= 1e12) return '$' + (m / 1e12).toFixed(2) + 'T';
+    if (m >= 1e9) return '$' + (m / 1e9).toFixed(2) + 'B';
+    if (m >= 1e6) return '$' + (m / 1e6).toFixed(2) + 'M';
+    return '$' + fmtCompact.format(m);
   }
   
-  // Список стейблкоинов
-  const STABLECOINS = ['usdt', 'usdc', 'dai', 'busd', 'tusd', 'usdp', 'usdd', 'frax', 'lusd', 'gusd', 'susd', 'eurs', 'fdusd', 'pyusd', 'usde', 'eurc'];
-  
-  // Проверка является ли монета стейблкоином
-  function isStablecoin(symbol) {
-    return STABLECOINS.includes(symbol.toLowerCase());
+  function formatChange(c) {
+    return (c >= 0 ? '+' : '') + c.toFixed(2) + '%';
   }
   
-  // Создание SVG спарклайна со сглаживанием
-  function createSparkline(data, isPositive, isStable = false) {
-    if (!data || data.length === 0) return '';
-    
-    const width = 90;
-    const height = 36;
-    const padding = 2;
-    
-    // Для стейблкоинов - прямая серая линия
+  // === STABLECOINS (Set for O(1) lookup) ===
+  const STABLECOINS = new Set(['usdt','usdc','dai','busd','tusd','usdp','usdd','frax','lusd','gusd','susd','eurs','fdusd','pyusd','usde','eurc']);
+  
+  // === SPARKLINE (lazy-rendered via IntersectionObserver) ===
+  function createSparklineSVG(data, isPositive, isStable) {
+    const w = 90, h = 36, p = 2;
     if (isStable) {
-      const midY = height / 2;
-      return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-        <line x1="${padding}" y1="${midY}" x2="${width - padding}" y2="${midY}" stroke="#444" stroke-width="1.5" />
-      </svg>`;
+      return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><line x1="${p}" y1="${h/2}" x2="${w-p}" y2="${h/2}" stroke="#444" stroke-width="1.5"/></svg>`;
     }
+    if (!data || !data.length) return '';
     
-    // Упрощаем данные - берём каждый N-й элемент
-    const step = Math.max(1, Math.floor(data.length / 30));
-    const simplified = data.filter((_, i) => i % step === 0);
-    
-    const min = Math.min(...simplified);
-    const max = Math.max(...simplified);
+    const step = Math.max(1, (data.length / 24) | 0);
+    let min = Infinity, max = -Infinity;
+    const sampled = [];
+    for (let i = 0; i < data.length; i += step) {
+      const v = data[i];
+      sampled.push(v);
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
     const range = max - min || 1;
+    const len = sampled.length - 1;
     
-    // Вычисляем точки
-    const points = simplified.map((val, i) => {
-      const x = padding + (i / (simplified.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((val - min) / range) * (height - padding * 2);
-      return { x, y };
-    });
-    
-    // Создаём сглаженную кривую Bezier
-    let path = `M ${points[0].x},${points[0].y}`;
-    for (let i = 0; i < points.length - 1; i++) {
-      const p0 = points[i];
-      const p1 = points[i + 1];
-      const midX = (p0.x + p1.x) / 2;
-      path += ` Q ${p0.x},${p0.y} ${midX},${(p0.y + p1.y) / 2}`;
+    let d = '';
+    for (let i = 0; i <= len; i++) {
+      const x = p + (i / len) * (w - p * 2);
+      const y = h - p - ((sampled[i] - min) / range) * (h - p * 2);
+      if (i === 0) { d = `M${x.toFixed(1)},${y.toFixed(1)}`; continue; }
+      const px = p + ((i-1) / len) * (w - p * 2);
+      const py = h - p - ((sampled[i-1] - min) / range) * (h - p * 2);
+      const mx = ((px + x) / 2).toFixed(1);
+      const my = ((py + y) / 2).toFixed(1);
+      d += `Q${px.toFixed(1)},${py.toFixed(1)} ${mx},${my}`;
     }
-    path += ` L ${points[points.length - 1].x},${points[points.length - 1].y}`;
+    const lx = (p + (w - p * 2)).toFixed(1);
+    const ly = (h - p - ((sampled[len] - min) / range) * (h - p * 2)).toFixed(1);
+    d += `L${lx},${ly}`;
     
     const color = isPositive ? '#22c55e' : '#ef4444';
-    
-    return `<svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
-      <path fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="${path}" />
-    </svg>`;
+    return `<svg viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><path fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="${d}"/></svg>`;
   }
   
-  // Отрисовка графика капитализации
+  // Lazy sparkline observer — renders SVG only when card scrolls into view
+  let sparklineObserver;
+  function setupSparklineObserver() {
+    if (sparklineObserver) sparklineObserver.disconnect();
+    sparklineObserver = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) {
+          const el = entry.target;
+          const svg = el.getAttribute('data-svg');
+          if (svg) {
+            el.innerHTML = svg;
+            el.removeAttribute('data-svg');
+          }
+          sparklineObserver.unobserve(el);
+        }
+      }
+    }, { rootMargin: '200px 0px' }); // preload 200px ahead
+  }
+  setupSparklineObserver();
+  
+  // === MCAP CHART (optimized canvas) ===
   function drawMcapChart(data) {
-    const canvas = document.getElementById('mcapChart');
-    if (!canvas || !data || data.length === 0) return;
+    const canvas = DOM.mcapChart;
+    if (!canvas || !data || !data.length) return;
     
-    const ctx = canvas.getContext('2d');
-    const dpr = window.devicePixelRatio || 1;
+    const ctx = canvas.getContext('2d', { alpha: false });
+    const dpr = Math.min(window.devicePixelRatio || 1, 2); // cap at 2x for perf
     const rect = canvas.getBoundingClientRect();
+    const w = rect.width, h = rect.height;
     
-    // Устанавливаем размеры с учётом DPR
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    canvas.width = w * dpr;
+    canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
+    ctx.fillStyle = '#0a0a0a';
+    ctx.fillRect(0, 0, w, h);
     
-    const width = rect.width;
-    const height = rect.height;
-    const padding = 4;
-    
-    const prices = data.map(d => d[1]);
-    const min = Math.min(...prices);
-    const max = Math.max(...prices);
+    const pad = 4;
+    const prices = data;
+    let min = Infinity, max = -Infinity;
+    for (let i = 0; i < prices.length; i++) {
+      const v = prices[i][1];
+      if (v < min) min = v;
+      if (v > max) max = v;
+    }
     const range = max - min || 1;
+    const len = prices.length - 1;
     
-    // Градиент под линией
-    const gradient = ctx.createLinearGradient(0, 0, 0, height);
-    gradient.addColorStop(0, 'rgba(59, 130, 246, 0.3)');
-    gradient.addColorStop(1, 'rgba(59, 130, 246, 0)');
+    // Fill gradient
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, 'rgba(59,130,246,0.3)');
+    grad.addColorStop(1, 'rgba(59,130,246,0)');
     
-    // Создаём путь для заливки
     ctx.beginPath();
-    ctx.moveTo(padding, height);
-    
-    prices.forEach((price, i) => {
-      const x = padding + (i / (prices.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((price - min) / range) * (height - padding * 2);
-      ctx.lineTo(x, y);
-    });
-    
-    ctx.lineTo(width - padding, height);
+    ctx.moveTo(pad, h);
+    for (let i = 0; i <= len; i++) {
+      ctx.lineTo(
+        pad + (i / len) * (w - pad * 2),
+        h - pad - ((prices[i][1] - min) / range) * (h - pad * 2)
+      );
+    }
+    ctx.lineTo(w - pad, h);
     ctx.closePath();
-    ctx.fillStyle = gradient;
+    ctx.fillStyle = grad;
     ctx.fill();
     
-    // Рисуем линию
+    // Line
     ctx.strokeStyle = '#3b82f6';
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.beginPath();
-    
-    prices.forEach((price, i) => {
-      const x = padding + (i / (prices.length - 1)) * (width - padding * 2);
-      const y = height - padding - ((price - min) / range) * (height - padding * 2);
-      
-      if (i === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
-    });
-    
+    for (let i = 0; i <= len; i++) {
+      const x = pad + (i / len) * (w - pad * 2);
+      const y = h - pad - ((prices[i][1] - min) / range) * (h - pad * 2);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
     ctx.stroke();
   }
   
-  // Загрузка Fear & Greed Index
+  // === FEAR & GREED INDEX ===
   async function loadFearGreedIndex() {
     try {
-      const fngUrl = needsProxy 
+      const url = needsProxy
         ? CORS_PROXY + encodeURIComponent('https://api.alternative.me/fng/?limit=1')
         : 'https://api.alternative.me/fng/?limit=1';
-      const response = await fetch(fngUrl);
-      if (!response.ok) return;
-      const data = await response.json();
-      
-      if (data && data.data && data.data[0]) {
-        const fng = data.data[0];
-        const value = parseInt(fng.value);
-        
-        document.getElementById('fearGreedValue').textContent = value;
-        document.getElementById('fearGreedIndicator').style.left = value + '%';
-        document.getElementById('fearGreedLabel').textContent = fng.value_classification;
+      const data = await cachedFetch(url, 120000); // cache 2min
+      if (data?.data?.[0]) {
+        const v = parseInt(data.data[0].value);
+        DOM.fearGreedValue.textContent = v;
+        DOM.fearGreedIndicator.style.left = v + '%';
+        DOM.fearGreedLabel.textContent = data.data[0].value_classification;
       }
-    } catch (error) {
-      console.error('Fear & Greed error:', error);
-      document.getElementById('fearGreedValue').textContent = '—';
-      document.getElementById('fearGreedLabel').textContent = 'Недоступно';
+    } catch (e) {
+      DOM.fearGreedValue.textContent = '—';
+      DOM.fearGreedLabel.textContent = 'Недоступно';
     }
   }
   
-  // Загрузка графика общей капитализации за 1 год
+  // === MCAP CHART LOADER ===
   async function loadMcapChart() {
     try {
-      const response = await fetch(
-        apiUrl('/coins/bitcoin/market_chart?vs_currency=usd&days=365')
+      const data = await cachedFetch(
+        apiUrl('/coins/bitcoin/market_chart?vs_currency=usd&days=365'),
+        300000 // cache 5min — chart data doesn't change fast
       );
-      if (!response.ok) return;
-      const data = await response.json();
-      
-      if (data && data.market_caps && data.market_caps.length > 0) {
-        // Берём каждый 3-й день для сглаживания
-        const sampled = data.market_caps.filter((_, i) => i % 3 === 0);
-        drawMcapChart(sampled);
+      if (data?.market_caps?.length) {
+        const sampled = data.market_caps.filter((_, i) => i % 4 === 0);
+        requestAnimationFrame(() => drawMcapChart(sampled));
       }
-    } catch (error) {
-      console.error('Chart error:', error);
-      // Fallback - рисуем пустой график
-      const canvas = document.getElementById('mcapChart');
-      if (canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = '#1a1a1a';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-      }
+    } catch (e) {
+      console.error('Chart error:', e);
     }
   }
-
-  // Загрузка данных
+  
+  // === CRYPTO LIST (DocumentFragment + lazy sparklines) ===
+  function getSmallImage(imageUrl) {
+    // CoinGecko images: replace /large/ with /small/ for faster load
+    if (typeof imageUrl === 'string') {
+      return imageUrl.replace('/large/', '/small/');
+    }
+    return imageUrl;
+  }
+  
   async function loadCryptoData() {
-    const list = document.getElementById('cryptoList');
-    
     try {
-      // Получаем топ-50 криптовалют со спарклайнами
-      const response = await fetch(
+      const coins = await cachedFetch(
         apiUrl('/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=50&page=1&sparkline=true&price_change_percentage=24h,7d')
       );
       
-      if (!response.ok) {
-        if (response.status === 429) {
-          throw new Error('Превышен лимит запросов. Подождите минуту.');
-        }
-        throw new Error('API недоступен');
-      }
+      // Load global stats in parallel (no artificial delay)
+      const globalPromise = cachedFetch(apiUrl('/global'));
       
-      const coins = await response.json();
+      // Build cards with DocumentFragment
+      const frag = document.createDocumentFragment();
       
-      // Получаем глобальную статистику
-      await delay(200);
-      const globalResponse = await fetch(apiUrl('/global'));
-      
-      if (globalResponse.ok) {
-        const globalData = await globalResponse.json();
-        
-        // Обновляем глобальную статистику
-        document.getElementById('totalMcap').textContent = formatMarketCap(globalData.data.total_market_cap.usd);
-        document.getElementById('totalVolume').textContent = formatMarketCap(globalData.data.total_volume.usd);
-        
-        // BTC Доминация
-        const btcDom = globalData.data.market_cap_percentage.btc;
-        document.getElementById('btcDominance').textContent = btcDom.toFixed(1) + '%';
-        
-        // Изменение капитализации за 24ч
-        const btcDomChange = globalData.data.market_cap_change_percentage_24h_usd;
-        const btcDomEl = document.getElementById('btcDomChange');
-        if (btcDomChange !== undefined) {
-          btcDomEl.textContent = (btcDomChange >= 0 ? '+' : '') + btcDomChange.toFixed(2) + '% mcap 24h';
-          btcDomEl.className = 'stat-change ' + (btcDomChange >= 0 ? 'positive' : 'negative');
-        }
-      }
-      
-      // Отрисовываем карточки
-      list.innerHTML = coins.map((coin, index) => {
-        const sparklineData = coin.sparkline_in_7d?.price || [];
+      for (let i = 0; i < coins.length; i++) {
+        const coin = coins[i];
+        const isStable = STABLECOINS.has(coin.symbol.toLowerCase());
+        const sparkData = coin.sparkline_in_7d?.price;
         const isPositive = (coin.price_change_percentage_7d_in_currency || 0) >= 0;
-        const isStable = isStablecoin(coin.symbol);
-        const sparklineSvg = createSparkline(sparklineData, isPositive, isStable);
+        const change24 = coin.price_change_percentage_24h || 0;
+        const positive24 = change24 >= 0;
         
-        return `
-        <a href="https://coinmarketcap.com/currencies/${coin.id}/" target="_blank" class="crypto-card">
-          <div class="crypto-rank ${index < 3 ? 'top3' : ''}">${index + 1}</div>
-          <div class="crypto-info">
-            <div class="crypto-name-row">
-              <img class="crypto-icon" src="${coin.image}" alt="${coin.name}" loading="lazy">
-              <span class="crypto-name">${coin.name}</span>
-              <span class="crypto-symbol">${coin.symbol}</span>
-            </div>
-            <div class="crypto-mcap">MCap: ${formatMarketCap(coin.market_cap)}</div>
-          </div>
-          <div class="crypto-sparkline">${sparklineSvg}</div>
-          <div class="crypto-price-block">
-            <div class="crypto-price">${formatPrice(coin.current_price)}</div>
-            <div class="crypto-change ${coin.price_change_percentage_24h >= 0 ? 'positive' : 'negative'}">
-              ${formatChange(coin.price_change_percentage_24h || 0)}
-            </div>
-          </div>
-        </a>
-      `}).join('');
+        const a = document.createElement('a');
+        a.href = `https://coinmarketcap.com/currencies/${coin.id}/`;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.className = 'crypto-card';
+        a.style.animationDelay = (i < 12 ? i * 20 : 0) + 'ms'; // stagger only visible cards
+        
+        // Pre-generate sparkline SVG string
+        const svgStr = createSparklineSVG(sparkData, isPositive, isStable);
+        
+        a.innerHTML = `<div class="crypto-rank${i < 3 ? ' top3' : ''}">${i + 1}</div><div class="crypto-info"><div class="crypto-name-row"><img class="crypto-icon" src="${getSmallImage(coin.image)}" alt="" width="32" height="32" loading="${i < 8 ? 'eager' : 'lazy'}" decoding="async"><span class="crypto-name">${coin.name}</span><span class="crypto-symbol">${coin.symbol}</span></div><div class="crypto-mcap">MCap: ${formatMarketCap(coin.market_cap)}</div></div><div class="crypto-sparkline" ${i >= 8 ? `data-svg='${svgStr.replace(/'/g,"&#39;")}'` : ''}>${i < 8 ? svgStr : ''}</div><div class="crypto-price-block"><div class="crypto-price">${formatPrice(coin.current_price)}</div><div class="crypto-change ${positive24 ? 'positive' : 'negative'}">${formatChange(change24)}</div></div>`;
+        
+        frag.appendChild(a);
+      }
       
-      // Обновляем время
+      // Single DOM write
+      DOM.list.textContent = '';
+      DOM.list.appendChild(frag);
+      
+      // Setup lazy sparkline rendering for cards below fold
+      DOM.list.querySelectorAll('.crypto-sparkline[data-svg]').forEach(el => {
+        sparklineObserver.observe(el);
+      });
+      
+      // Update time
       const now = new Date();
-      document.getElementById('lastUpdate').textContent = 
-        `Обновлено: ${now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+      DOM.lastUpdate.textContent = `Обновлено: ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+      
+      // Process global stats (awaited in parallel)
+      try {
+        const globalData = await globalPromise;
+        if (globalData?.data) {
+          const d = globalData.data;
+          DOM.totalMcap.textContent = formatMarketCap(d.total_market_cap.usd);
+          DOM.totalVolume.textContent = formatMarketCap(d.total_volume.usd);
+          DOM.btcDominance.textContent = d.market_cap_percentage.btc.toFixed(1) + '%';
+          
+          const mcapChange = d.market_cap_change_percentage_24h_usd;
+          if (mcapChange !== undefined) {
+            DOM.btcDomChange.textContent = (mcapChange >= 0 ? '+' : '') + mcapChange.toFixed(2) + '% mcap 24h';
+            DOM.btcDomChange.className = 'stat-change ' + (mcapChange >= 0 ? 'positive' : 'negative');
+          }
+        }
+      } catch (e) { /* global stats are non-critical */ }
       
     } catch (error) {
       console.error('Ошибка загрузки:', error);
-      // Показываем ошибку только если список пустой
-      if (list.querySelector('.loading') || list.children.length === 0) {
-        list.innerHTML = `
-          <div class="error">
-            <div class="error-title">Ошибка загрузки</div>
-            <div class="error-message">${error.message}</div>
-            <button class="retry-btn" onclick="loadAllData()">Попробовать снова</button>
-          </div>
-        `;
+      if (DOM.list.querySelector('.loading') || !DOM.list.children.length) {
+        DOM.list.innerHTML = `<div class="error"><div class="error-title">Ошибка загрузки</div><div class="error-message">${error.message}</div><button class="retry-btn" onclick="loadAllData()">Попробовать снова</button></div>`;
       }
     }
   }
-
-  // Задержка между запросами (для избежания rate limit)
-  function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-  }
   
-  // Загрузка BTC ATH
+  // === BTC ATH ===
   async function loadBtcAth() {
     try {
-      const response = await fetch(apiUrl('/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false'));
-      if (!response.ok) return;
-      const data = await response.json();
-      
-      if (data && data.market_data) {
-        const currentPrice = data.market_data.current_price.usd;
-        const ath = data.market_data.ath.usd;
-        const athDate = new Date(data.market_data.ath_date.usd);
+      const data = await cachedFetch(
+        apiUrl('/coins/bitcoin?localization=false&tickers=false&community_data=false&developer_data=false'),
+        60000 // cache 1min
+      );
+      if (data?.market_data) {
+        const md = data.market_data;
+        const cur = md.current_price.usd;
+        const ath = md.ath.usd;
+        const athDate = new Date(md.ath_date.usd);
+        const toAth = ((ath - cur) / cur * 100);
+        const fromAth = ((cur - ath) / ath * 100);
         
-        // Сколько процентов нужно вырасти до ATH
-        const toAth = ((ath - currentPrice) / currentPrice * 100);
+        DOM.btcToAth.textContent = '+' + toAth.toFixed(1) + '%';
+        DOM.btcToAth.style.color = toAth > 0 ? '#f59e0b' : '#22c55e';
+        DOM.btcAthPrice.textContent = 'ATH: $' + fmtCompact.format(ath) + ' (' + athDate.toLocaleDateString('ru-RU', {month:'short',year:'numeric'}) + ')';
         
-        // Сколько процентов упала цена от ATH
-        const fromAth = ((currentPrice - ath) / ath * 100);
-        
-        // BTC до ATH
-        document.getElementById('btcToAth').textContent = '+' + toAth.toFixed(1) + '%';
-        document.getElementById('btcToAth').style.color = toAth > 0 ? '#f59e0b' : '#22c55e';
-        document.getElementById('btcAthPrice').textContent = 
-          'ATH: $' + ath.toLocaleString('en-US', {maximumFractionDigits: 0}) + 
-          ' (' + athDate.toLocaleDateString('ru-RU', {month: 'short', year: 'numeric'}) + ')';
-        
-        // BTC от ATH
-        document.getElementById('btcFromAth').textContent = fromAth.toFixed(1) + '%';
-        document.getElementById('btcFromAth').style.color = fromAth >= 0 ? '#22c55e' : '#ef4444';
-        document.getElementById('btcCurrentPrice').textContent = 
-          'Сейчас: $' + currentPrice.toLocaleString('en-US', {maximumFractionDigits: 0});
+        DOM.btcFromAth.textContent = fromAth.toFixed(1) + '%';
+        DOM.btcFromAth.style.color = fromAth >= 0 ? '#22c55e' : '#ef4444';
+        DOM.btcCurrentPrice.textContent = 'Сейчас: $' + fmtCompact.format(cur);
       }
-    } catch (error) {
-      console.error('BTC ATH error:', error);
-      document.getElementById('btcToAth').textContent = '—';
-      document.getElementById('btcFromAth').textContent = '—';
+    } catch (e) {
+      DOM.btcToAth.textContent = '—';
+      DOM.btcFromAth.textContent = '—';
     }
   }
   
-  // Полная загрузка всех данных с задержками
+  // === LOAD ALL DATA (parallel where possible) ===
   async function loadAllData() {
     try {
+      // Load main list first (highest priority)
       await loadCryptoData();
-      await delay(300);
-      await loadFearGreedIndex();
-      await delay(300);
-      await loadBtcAth();
-    } catch (error) {
-      console.error('Ошибка загрузки:', error);
+      // Then load secondary data in parallel
+      await Promise.allSettled([loadFearGreedIndex(), loadBtcAth()]);
+    } catch (e) {
+      console.error('Ошибка загрузки:', e);
     }
   }
   
-  // === КНОПКА ОБНОВЛЕНИЯ ===
-  const COOLDOWN = 60; // секунд
-  let countdown = 0;
-  let timer = null;
-  const btn = document.getElementById('refreshBtn');
+  // === REFRESH BUTTON (passive listener) ===
+  const COOLDOWN = 60;
+  let countdown = 0, timer = null;
+  const btn = $('refreshBtn');
   
   function updateBtn() {
-    if (countdown > 0) {
-      btn.textContent = countdown;
-      btn.disabled = true;
-    } else {
-      btn.textContent = '↻';
-      btn.disabled = false;
-    }
+    btn.textContent = countdown > 0 ? countdown : '↻';
+    btn.disabled = countdown > 0;
   }
   
   function startCooldown() {
     countdown = COOLDOWN;
     updateBtn();
     if (timer) clearInterval(timer);
-    timer = setInterval(function() {
-      countdown--;
+    timer = setInterval(() => {
+      if (--countdown <= 0) { clearInterval(timer); timer = null; }
       updateBtn();
-      if (countdown <= 0) {
-        clearInterval(timer);
-        timer = null;
-      }
     }, 1000);
   }
   
-  btn.onclick = function() {
-    if (countdown <= 0) {
-      loadAllData();
-      startCooldown();
-    }
-  };
-
-  // Загрузка при старте
+  btn.addEventListener('click', () => {
+    if (countdown <= 0) { loadAllData(); startCooldown(); }
+  }, { passive: true });
+  
+  // === INIT ===
+  // Load critical data immediately
   loadAllData();
-  loadMcapChart();
   startCooldown();
   
-  // Автообновление каждые 90 секунд
-  setInterval(function() {
-    if (countdown <= 0) {
-      loadAllData();
-      startCooldown();
-    }
+  // Load chart after first paint (non-blocking)
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => loadMcapChart(), { timeout: 2000 });
+  } else {
+    setTimeout(loadMcapChart, 100);
+  }
+  
+  // Auto-refresh every 90s
+  setInterval(() => {
+    if (countdown <= 0) { loadAllData(); startCooldown(); }
   }, 90000);
+  
+  // === SERVICE WORKER REGISTRATION ===
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
 </script>
 
 </body>
